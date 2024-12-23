@@ -126,6 +126,47 @@ func getProductByIDHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Product not found", http.StatusNotFound)
 }
 
+func updateProductHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+	// Получаем ID из URL
+	idStr := r.URL.Path[len("/Products/update/"):]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid Product ID", http.StatusBadRequest)
+		return
+	}
+
+	// Декодируем обновлённые данные продукта
+	var updatedProduct Product
+	err = json.NewDecoder(r.Body).Decode(&updatedProduct)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Ищем продукт для обновления
+	for i, Product := range products {
+		if Product.ID == id {
+			products[i].Name = updatedProduct.Name
+			products[i].ImageURL = updatedProduct.ImageURL
+			products[i].Price = updatedProduct.Price
+			products[i].Description = updatedProduct.Description
+			products[i].IsFavourite = updatedProduct.IsFavourite
+			products[i].IsInCart = updatedProduct.IsInCart
+			products[i].Quantity = updatedProduct.Quantity
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(products[i])
+			return
+		}
+	}
+
+	// Если продукт не найден
+	http.Error(w, "Product not found", http.StatusNotFound)
+}
+
 // удаление продукта по id
 func deleteProductHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
@@ -160,6 +201,7 @@ func main() {
 	http.HandleFunc("/products/create", createProductHandler)
 	http.HandleFunc("/products/", getProductByIDHandler)
 	http.HandleFunc("/products/delete/", deleteProductHandler)
+	http.HandleFunc("/products/update/", updateProductHandler) // обновление продукта
 
 	fmt.Println("Сервер запущен на порте 8080")
 	http.ListenAndServe(":8080", nil)
